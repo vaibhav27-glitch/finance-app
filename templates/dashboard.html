@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Simple Finance Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #121212; color: #fff; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
+    .card { background: #181818; border-radius: 18px; box-shadow: 0 4px 24px #0003; }
+    .card-title { color: #fff; font-weight: 600; }
+    .credit { background: #c3f5c4; border-radius: 12px; }
+    .debit { background: #ffd1d1; border-radius: 12px; }
+    .credit-table th, .credit-table td { background: #e1f7e1 !important; color: #000;}
+    .debit-table th, .debit-table td { background: #f5cccc !important; color: #000;}
+    .amount-big { font-size: 2.6rem; font-weight: bold; color: #fff; text-shadow: 0 0 8px #222; }
+    .user-name { font-size: 2.2rem; font-weight: bold; letter-spacing: 2px; color: #fff; text-align: center;}
+    .table > :not(caption) > * > * { border-bottom-width: 2px;}
+    input, button { margin-bottom: 5px !important;}
+    /* Text box style in Credit/Debit cards - black text and grey placeholder */
+    .credit input.form-control,
+    .debit input.form-control {
+      background: #fff;
+      color: #000;
+    }
+    .credit input.form-control::placeholder,
+    .debit input.form-control::placeholder {
+      color: #333 !important;
+      opacity: 1;
+    }
+    /* Delete Button Styling */
+    .delete-btn {
+      background: #333;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1.2rem;
+      height: 30px;
+      min-width: 30px;
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .delete-btn:hover {
+      background: #555;
+    }
+    .delete-x {
+      font-family: sans-serif;
+      font-size: 1.4rem;
+      font-weight: bold;
+      line-height: 1;
+      color: #fff;
+      margin: auto;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+<div class="container py-5" style="position: relative;">
+
+  <!-- Logout Button -->
+  <a href="{{ url_for('logout') }}" 
+     class="btn"
+     style="position:fixed; top:30px; right:150px; z-index:1000; background:#a786fe; color:#fff; font-weight:600; border:none; border-radius:8px; padding:8px 26px;">
+     Logout
+  </a>
+  
+  <!-- Download Button -->
+  <a href="{{ url_for('download_pdf') }}"
+     class="btn"
+     style="position:fixed; top:30px; right:40px; z-index:1000; background:#a786fe; color:#fff; font-weight:600; border:none; border-radius:8px; padding:8px 26px;">
+     Download
+  </a>
+
+  <!-- Top Row: Available Amount & User Name -->
+  <div class="row mb-4 align-items-stretch">
+    <div class="col-md-6 mb-2">
+      <div class="card p-4 h-100 text-center">
+        <div class="card-title">Available Amount</div>
+        <div class="amount-big">₹{{ available_amount }}</div>
+      </div>
+    </div>
+    <div class="col-md-6 mb-2 d-flex justify-content-center align-items-center">
+      <div class="card p-4 w-100 h-100 d-flex align-items-center justify-content-center">
+        <div class="user-name">{{ user }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Second Row: Credit/Debit Side by Side -->
+  <div class="row gx-3">
+    <div class="col-lg-6 mb-3">
+      <div class="p-3 credit">
+        <h4 class="mb-3">Credit</h4>
+        <form method="post" class="d-flex gap-2 mb-3">
+          <input type="hidden" name="entry_type" value="credit">
+          <input type="text" name="description" required class="form-control" placeholder="Description">
+          <input type="text" name="amount" required class="form-control" placeholder="Money">
+          <button type="submit" class="btn btn-success">Add Credit</button>
+        </form>
+        <table class="table credit-table mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Money</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in credits %}
+            <tr>
+              <td>{{ c.date }}</td>
+              <td>{{ c.description }}</td>
+              <td>{{ c.amount }}</td>
+              <td>
+                <form method="post" action="{{ url_for('delete_credit', credit_id=c.id) }}" style="margin:0;">
+                  <button class="delete-btn" type="submit" title="Delete">
+                    <span class="delete-x">&#10006;</span>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+            <tr style="font-weight:bold;">
+              <td colspan="3" align="right">Total:</td>
+              <td>{{ total_credit }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="col-lg-6 mb-3">
+      <div class="p-3 debit">
+        <h4 class="mb-3">Debit</h4>
+        <form method="post" class="d-flex gap-2 mb-3">
+          <input type="hidden" name="entry_type" value="debit">
+          <input type="text" name="description" required class="form-control" placeholder="Description">
+          <input type="text" name="amount" required class="form-control" placeholder="Money">
+          <button type="submit" class="btn btn-danger">Add Debit</button>
+        </form>
+        <table class="table debit-table mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Money</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in debits %}
+            <tr>
+              <td>{{ d.date }}</td>
+              <td>{{ d.description }}</td>
+              <td>{{ d.amount }}</td>
+              <td>
+                <form method="post" action="{{ url_for('delete_debit', debit_id=d.id) }}" style="margin:0;">
+                  <button class="delete-btn" type="submit" title="Delete">
+                    <span class="delete-x">&#10006;</span>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+            <tr style="font-weight:bold;">
+              <td colspan="3" align="right">Total:</td>
+              <td>{{ total_debit }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Flash Messages -->
+  <div class="mt-3">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div style="color:green;font-weight:600">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+  </div>
+  
+</div>
+</body>
+</html>
